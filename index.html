@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeeBrain — Live Muse 2 Meditation Analyzer</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body data-view="live">
+    <header>
+      <h1>SeeBrain</h1>
+      <div class="sub">Frontal + temporal activity, baseline-relative, with multi-state meditation analysis</div>
+    </header>
+
+    <div class="view-live">
+      <section class="controls">
+        <button id="connect">Connect Muse</button>
+        <button id="baseline" disabled>Set baseline (30s)</button>
+        <button id="record" disabled>Record session</button>
+        <span id="status" class="status disconnected">Disconnected</span>
+        <span id="phase" class="phase"></span>
+        <span id="rec-indicator" class="rec-indicator hidden">● REC</span>
+        <span id="info" class="info"></span>
+      </section>
+
+      <section id="baseline-progress" class="baseline-progress hidden">
+        <div class="bp-label">Recording baseline — sit still, eyes closed, breathe normally</div>
+        <div class="bp-bar"><div id="bp-fill" class="bp-fill"></div></div>
+      </section>
+
+      <section id="meditation-panel" class="panel meditation-panel hidden">
+        <div class="med-row">
+          <div class="med-score-block">
+            <div class="med-label">Meditativeness vs baseline</div>
+            <div class="med-meter">
+              <div class="med-meter-track"></div>
+              <div class="med-meter-zero"></div>
+              <div id="med-needle" class="med-meter-needle"></div>
+            </div>
+            <div class="med-scale"><span>−3σ</span><span>0</span><span>+3σ</span></div>
+            <div class="state-row">
+              <span class="state-label">Current state:</span>
+              <span id="state-chip" class="state-chip">—</span>
+            </div>
+            <div id="state-desc" class="state-desc"></div>
+          </div>
+
+          <div class="med-grid">
+            <div class="med-grid-section">
+              <div class="ms-title">Composite</div>
+              <div class="comp comp-score"><span class="comp-label">M score</span><span id="comp-score" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">α temporal</span><span id="comp-alpha" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">θ frontal</span><span id="comp-theta" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">β frontal</span><span id="comp-beta" class="comp-val">0.00</span></div>
+            </div>
+            <div class="med-grid-section">
+              <div class="ms-title">Derived indices</div>
+              <div class="comp"><span class="comp-label">FAA (AF8−AF7)</span><span id="idx-faa" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">θ/β frontal</span><span id="idx-tbr" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">α/β temp/front</span><span id="idx-abr" class="comp-val">0.00</span></div>
+              <div class="comp"><span class="comp-label">Engagement</span><span id="idx-eng" class="comp-val">0.00</span></div>
+            </div>
+          </div>
+
+          <div id="session-timer" class="session-timer hidden">
+            <div class="st-label">Recording</div>
+            <div id="st-time" class="st-time">00:00</div>
+            <div id="st-buffer" class="st-buffer">— samples</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel sessions-panel">
+        <div class="sessions-header">
+          <h2>Saved sessions</h2>
+          <span id="sessions-count" class="sessions-count"></span>
+        </div>
+        <div id="sessions-list" class="sessions-list">
+          <div class="sessions-empty">No saved sessions yet. Record one to begin.</div>
+        </div>
+      </section>
+
+      <main>
+        <section class="panel band-grid-panel">
+          <h2>Band-resolved topographic activity</h2>
+          <div id="band-grid" class="band-grid"></div>
+          <div class="legend">
+            <span id="legend-lo">low</span>
+            <canvas id="legend" width="220" height="12"></canvas>
+            <span id="legend-hi">high</span>
+            <span id="legend-note" class="legend-note">per-band auto scale</span>
+          </div>
+          <p class="caveat">
+            Clouds are gated to the immediate neighborhood of each electrode.
+            Frontal (AF7+AF8) merges; TP9 and TP10 are independent. After
+            baseline, colors are z-scores vs your own resting state.
+          </p>
+        </section>
+
+        <section class="panel ts-panel">
+          <h2>Raw signal per channel <span class="ts-hint">contact quality from RMS</span></h2>
+          <div class="ts-grid">
+            <div class="ts-cell"><span class="quality-dot" data-ch="0"></span><span class="lbl">TP9</span><canvas class="ts" data-ch="0" width="520" height="56"></canvas></div>
+            <div class="ts-cell"><span class="quality-dot" data-ch="1"></span><span class="lbl">AF7</span><canvas class="ts" data-ch="1" width="520" height="56"></canvas></div>
+            <div class="ts-cell"><span class="quality-dot" data-ch="2"></span><span class="lbl">AF8</span><canvas class="ts" data-ch="2" width="520" height="56"></canvas></div>
+            <div class="ts-cell"><span class="quality-dot" data-ch="3"></span><span class="lbl">TP10</span><canvas class="ts" data-ch="3" width="520" height="56"></canvas></div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          <strong>Methodology.</strong> 30 s eyes-closed baseline establishes
+          per-channel, per-band mean μ and SD σ of log-power. Live readings
+          become z-scores. All windows are kept; running statistics dilute
+          transient blinks and movement. Per-channel contact-quality dots
+          (green &lt; 40 µV RMS, amber &lt; 90 µV, red ≥ 90 µV) flag a single
+          bad electrode rather than blanket-discrediting the headset.
+        </p>
+        <p>
+          <strong>Multi-state analyzer.</strong> Each window is scored into
+          five states from the meditation literature:
+          <em>Relaxed</em> (temporal α↑, frontal β↓; Cahn &amp; Polich 2006),
+          <em>Focused</em> (frontal-midline θ↑, β↓; Aftanas &amp;
+          Golocheikine 2001), <em>Aroused</em> (β↑, α↓), <em>Drowsy</em>
+          (δ+θ↑ without α enhancement), <em>Neutral</em>. Plus indices: FAA
+          (Coan &amp; Allen 2004), θ/β, α/β, engagement (Pope, Bogart &amp;
+          Bartolome 1995).
+        </p>
+        <p>
+          <strong>Recording.</strong> Sessions are stored locally in IndexedDB
+          including the full 256 Hz raw EEG per channel and the 10 Hz analysis
+          time series, so they can be re-analyzed later in detail. Use a
+          session's <em>View</em> button to open the detail page.
+        </p>
+      </footer>
+    </div>
+
+    <div class="view-detail">
+      <section class="detail-header">
+        <button id="back-btn" class="ghost-btn">← Back to live</button>
+        <div class="detail-title-block">
+          <h2 id="detail-title">Session</h2>
+          <span id="detail-subtitle" class="detail-subtitle"></span>
+        </div>
+        <div class="detail-actions">
+          <button id="rename-current" class="ghost-btn">Rename</button>
+          <button id="export-summary-csv">Export summary CSV</button>
+          <button id="export-raw-csv">Export raw CSV</button>
+          <button id="export-json" class="ghost-btn">Export JSON</button>
+          <button id="delete-current" class="ghost-btn danger-btn">Delete</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Summary</h2>
+        <div class="summary-grid">
+          <div class="sum-item"><div class="sum-key">Duration</div><div id="d-sum-duration" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Mean M</div><div id="d-sum-mean" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Peak M</div><div id="d-sum-peak" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">M&gt;0.5</div><div id="d-sum-frac" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Mean α temp</div><div id="d-sum-alpha" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Mean θ front</div><div id="d-sum-theta" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Mean β front</div><div id="d-sum-beta" class="sum-val">—</div></div>
+          <div class="sum-item"><div class="sum-key">Raw samples</div><div id="d-sum-raw" class="sum-val">—</div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>State breakdown</h2>
+        <div id="d-state-bar" class="state-bar"></div>
+        <div id="d-state-legend" class="state-legend"></div>
+      </section>
+
+      <section class="panel">
+        <h2>M score over time</h2>
+        <canvas id="d-sum-spark" width="900" height="140"></canvas>
+      </section>
+
+      <section class="panel">
+        <h2>Mean derived indices (vs baseline σ)</h2>
+        <div class="idx-grid">
+          <div class="idx-item"><div class="idx-key">FAA</div><div id="d-sum-faa" class="idx-val">—</div><div class="idx-note">Approach/positive affect if positive</div></div>
+          <div class="idx-item"><div class="idx-key">θ/β frontal</div><div id="d-sum-tbr" class="idx-val">—</div><div class="idx-note">Internally-directed attention</div></div>
+          <div class="idx-item"><div class="idx-key">α/β temp/front</div><div id="d-sum-abr" class="idx-val">—</div><div class="idx-note">Relaxation index</div></div>
+          <div class="idx-item"><div class="idx-key">Engagement</div><div id="d-sum-eng" class="idx-val">—</div><div class="idx-note">Higher = arousal/engagement</div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Raw EEG envelope (full session)</h2>
+        <div class="env-grid">
+          <div class="env-row"><span class="lbl">TP9</span><canvas class="env" data-ch="0" height="60"></canvas></div>
+          <div class="env-row"><span class="lbl">AF7</span><canvas class="env" data-ch="1" height="60"></canvas></div>
+          <div class="env-row"><span class="lbl">AF8</span><canvas class="env" data-ch="2" height="60"></canvas></div>
+          <div class="env-row"><span class="lbl">TP10</span><canvas class="env" data-ch="3" height="60"></canvas></div>
+        </div>
+        <p class="caveat">Envelope shows min/max amplitude per pixel column from the full 256 Hz raw signal stored in IndexedDB. Export raw CSV for full per-sample access.</p>
+      </section>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
