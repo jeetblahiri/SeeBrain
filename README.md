@@ -1,4 +1,4 @@
-# SeeBrain
+# SeeBrain v0.1
 
 A web-based, real-time EEG visualizer and multi-state meditation analyzer for the **Muse 2** headband. Streams raw 256 Hz EEG over Web Bluetooth directly to your browser — no Python bridge, no Mind Monitor, no LSL — and renders frontal + temporal cortical activity as smooth band-resolved topographic clouds. Records sessions to IndexedDB with **full raw signal preserved** so you can re-analyze them later.
 
